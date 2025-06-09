@@ -1,4 +1,7 @@
 ---
+#| include: false
+#| warning: false
+#| message: false
 title: "Ames Housing Price Prediction"
 subtitle: "Analysis of Structural Housing Features and Sale Prices"
 author: 
@@ -7,47 +10,24 @@ thanks: "Code and data are available at: https://github.com/AndyYanxunJiang/ames
 date: today
 date-format: long
 abstract: "This paper analyzes housing sale prices in Ames, Iowa using multiple linear regression. The dataset is filtered to focus on homes with 2–4 bedrooms, built after 1940, and rated average to excellent in quality. Predictors include log-transformed ground living area, garage area, year built, number of bedrooms, and overall quality. Log transformations address skewness and heteroscedasticity. The final model achieves an R² of 0.819, with ground living area and overall quality identified as the most influential predictors. The results provide interpretable insights for investors, buyers, and policymakers."
-format: html
+format: pdf
 number-sections: true
 toc: true
+bibliography: references.bib
+
 ---
 
-# Introduction
-
-How do ground living area, garage area, year built, number of bedrooms, and overall quality influence the sales price of houses in Ames, Iowa?
-
-The housing market significantly impacts financial stability and investment. The challenge many people face in finding affordable housing highlights the importance of understanding the factors that influence house prices. Given rising real estate costs, identifying factors influencing home values has become both timely and relevant. This study aims to analyze the key factors affecting housing prices in Ames, Iowa, focusing on attributes such as the number of bedrooms (two to four), garage area, ground living area, overall quality (average to excellent), and year built. The research question seeks to determine which housing attributes most significantly influence the sales price of homes in average to excellent quality grade with two to four bedrooms.
-
-There are several peer-reviewed papers that have studied this topic. In Paper 1, Shukla demonstrated the effectiveness of multiple linear regression in predicting housing prices, listing property size and number of bedrooms as significant predictors, reflecting their intrinsic value and desirability. In Paper 2, Ye’s paper compared different predictive models specifically for Ames housing prices and identified overall quality of the house and living area as the most influential factors. In Paper 3, Han explored predicting house prices in Ames, Iowa with the same dataset using various advanced regression models and identified key features influencing house prices. They found overall quality of material and finish and year built to be the most significant variables, as well as garage area and ground living area to be significant variables. These studies support the selection of predictor variables and the use of linear regression for this analysis.
-
-Previous research suggests that linear regression is an effective tool for examining the direct relationships between multiple predictors (such as housing attributes) and the response variable (sales price) (GeeksforGeeks). By modeling how factors like size, age, quality, and market trends affect house prices, linear regression quantifies these relationships and provides clear, interpretable coefficients. This makes it a widely used and suitable method for this study, aiming to offer insights into the factors that influence home prices in Ames, Iowa, with a focus on houses in average or above condition with at least two bedrooms.
-
-# Data Description
-
-The dataset used in this analysis is from the Ames Housing data available through the AmesHousing R package (Kuhn and Johnson). Originally curated by Dean De Cock for use in data science education. The original dataset describes the sale of individual residential properties in Ames, Iowa, from 2006 to 2010 and includes 82 variables related to various attributes of each property.
-
-The response variable for this study is the final sale price of each home. Since sales price is highly right-skewed, we apply log transformation to stabilize the variance and make the distribution suitable for regression analysis. This transformation is commonly used in price modeling to address issues related to non-normality and heteroscedasticity (Gupta).
-
-Prior to log transformation, sale price is heavily right skewed. After the log transformation, sale price is more normally distributed.
-
-According to Shukla, the predictor variables reflect the intrinsic value and desirability of the house, directly tied to the house’s sale price (Shukla, f749). These variables capture essential aspects of a property’s value and appeal, which are key determinants of its market price.
-
-Boxplot for ground living area has a longer upper whisker and outliers extending further from the median, indicating right skewness. We applied log transformation to deal with the skewness, now the distribution looks more normal.
-
-Garage area has a similar distribution as ground living area, showing a right skew. We again apply log transformation to address the same skewness issue. The normality of distribution is drastically improved.
-
-Due to the discrete and linear nature of time, there seem to have high and low extremes which can possibly be explained by economic factors. However, the count differences do not necessarily heavily impact residual variances. Houses generally have 2–4 bedrooms above ground, and houses with 3 bedrooms above ground dominate.
-
-Most houses have average to good quality grades, with a rare number of excellent grades.
-
-# Preliminary Model Results
-
-We begin by loading the Ames housing data and applying transformations and filters to focus on homes with 2–4 bedrooms, built after 1940, and rated average to excellent in quality. The response variable, Sale Price, is log-transformed to address skewness. The predictors log ground living area and log garage area are also log-transformed to stabilize variance.
-
 ```{r}
+#| include: false
+#| warning: false
+#| message: false
+
 library(dplyr)
 library(AmesHousing)
 library(ggplot2)
+library(knitr)
+library(patchwork)
+
 
 # get data
 ames_data <- make_ames()
@@ -76,6 +56,11 @@ ames_data <- ames_data %>%
 
 # model data
 lm_model <- lm(
+  log_Sale_Price ~ Gr_Liv_Area + Garage_Area + Year_Built + Bedroom_AbvGr + Overall_Qual,
+  data = ames_data
+)
+
+lm_trans_model <- lm(
   log_Sale_Price ~ log_Gr_Liv_Area + log_Garage_Area + Year_Built + Bedroom_AbvGr + Overall_Qual,
   data = ames_data
 )
@@ -84,120 +69,601 @@ lm_model <- lm(
 summary(lm_model)
 ```
 
-The preliminary model output shows that most predictors are statistically significant. However, visual inspection of residual plots revealed patterns indicating potential violations of model assumptions such as heteroscedasticity.
+
+# Introduction
+The housing market significantly impacts financial stability and investment. The challenge many people face in finding affordable housing highlights the importance of understanding the factors that influence house prices. Given rising real estate costs, identifying factors influencing home values has become both timely and relevant. This study aims to analyze the key factors affecting housing prices in Ames, Iowa, focusing on attributes such as the number of bedrooms (two to four), garage area, ground living area, overall quality (average to excellent), and year built. The research question seeks to determine which housing attributes most significantly influence the sales price of homes in average to excellent quality grade with two to four bedrooms.
+
+There are several peer-reviewed papers that have studied this topic. [@shukla2024mlr] demonstrated the effectiveness of multiple linear regression in predicting housing prices, listing property size and number of bedrooms as significant predictors, reflecting their intrinsic value and desirability. [@ye2024ml] compared different predictive models specifically for Ames housing prices and identified overall quality of the house and living area as the most influential factors. [@han2023regression] explored predicting house prices in Ames, Iowa with the same dataset using various advanced regression models and identified key features influencing house prices. They found overall quality of material and finish and year built to be the most significant variables, as well as garage area and ground living area to be significant variables. These studies support the selection of predictor variables and the use of linear regression for this analysis.
+
+Previous research suggests that linear regression is an effective tool for examining the direct relationships between multiple predictors (such as housing attributes) and the response variable (sales price) [@geeksforgeeks2023mlr]. By modeling how factors like size, age, quality, and market trends affect house prices, linear regression quantifies these relationships and provides clear, interpretable coefficients. This makes it a widely used and suitable method for this study, aiming to offer insights into the factors that influence home prices in Ames, Iowa, with a focus on houses in average or above condition with at least two bedrooms.
+
+# Data Description {#sec-data}
+The dataset used in this analysis is from the Ames Housing data available through the AmesHousing R package [@kuhn2024ameshousing]. Originally curated by Dean De Cock for use in data science education. The original dataset describes the sale of individual residential properties in Ames, Iowa, from 2006 to 2010 and includes 82 variables related to various attributes of each property.
+
+The response variable for this study is the final sale price of each home. Since sales price is highly right-skewed, we apply log transformation to stabilize the variance and make the distribution suitable for regression analysis. This transformation is commonly used in price modeling to address issues related to non-normality and heteroscedasticity [@gupta2024gbm].
 
 ```{r}
-# get residuals
+#| label: fig-sale
+#| fig-cap: Distribution of House Sale Prices.
+#| echo: false
+#| warning: false
+#| message: false
+ggplot(ames_data, aes(x = Sale_Price)) +
+  geom_histogram(bins = 50, fill = "#69b3a2", color = "white", alpha = 0.8) +
+  labs(
+    x = "Sale Price (USD)",
+    y = "Number of Houses"
+  ) +
+  scale_x_continuous(labels = scales::comma) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.title = element_text(face = "bold"),
+    panel.grid.major.y = element_line(color = "grey90"),
+    panel.grid.minor = element_blank()
+  )
+
+```
+
+Prior to log transformation in @fig-sale, sale price is heavily right skewed.
+
+
+```{r}
+#| label: fig-log-sale
+#| fig-cap: Distribution of Log-Transformed Sale Prices.
+#| echo: false
+#| warning: false
+#| message: false
+ggplot(ames_data, aes(x = log_Sale_Price)) +
+  geom_histogram(bins = 50, fill = "#4682B4", color = "white", alpha = 0.8) +
+  labs(
+    x = "Log(Sale Price)",
+    y = "Number of Houses"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.title = element_text(face = "bold"),
+    panel.grid.major.y = element_line(color = "grey90"),
+    panel.grid.minor = element_blank()
+  )
+
+```
+After the log transformation in @fig-log-sale, sale price is more normally distributed.
+
+```{r}
+#| label: tbl-summary
+#| tbl-cap: Predictors, Measurement Units, Restrictions, and Literature Mentions.
+#| echo: false
+predictor_table <- data.frame(
+  Predictor = c(
+    "Ground Living Area", "Garage Area", "Year House Built",
+    "Bedrooms Above Ground", "Overall Quality of Material and Finish"
+  ),
+  Measurement = c(
+    "Square feet", "Square feet", "Year", "Count",
+    "Quality Grade\n(10 Levels: Very_Poor to Very_Excellent)"
+  ),
+  Restriction = c(
+    "N/A", "Garage_Area > 0", "Year_Built >= 1940",
+    "Two to four bedrooms\nc(2, 3, 4)",
+    "Average to Excellent grade\nc(\"Average\", \"Above_Average\", \"Good\", \"Very_Good\", \"Excellent\")"
+  ),
+  Mentioned = c(
+    "Paper 2\nPaper 3", "Paper 2\nPaper 3", "Paper 3", "Paper 1", "Paper 2\nPaper 3"
+  )
+)
+
+kable(predictor_table, align = "l")
+
+
+
+```
+
+According to [@shukla2024mlr], the predictor variables reflect the intrinsic value and desirability of the house, directly tied to the house’s sale price. These variables capture essential aspects of a property’s value and appeal, which are key determinants of its market price.
+
+```{r}
+#| label: fig-living-area
+#| fig-cap: Boxplot of Ground Living Area.
+#| echo: false
+#| warning: false
+#| message: false
+ggplot(ames_data, aes(y = Gr_Liv_Area)) +
+  geom_boxplot(fill = "#FFA07A", color = "black", alpha = 0.7, outlier.colour = "red", outlier.shape = 16) +
+  labs(
+    y = "Ground Living Area (sq ft)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.title.y = element_text(face = "bold")
+  )
+
+```
+
+```{r}
+#| label: fig-log-living-area
+#| fig-cap: Boxplot of Log-Transformed Ground Living Area.
+#| echo: false
+#| warning: false
+#| message: false
+ggplot(ames_data, aes(y = log_Gr_Liv_Area)) +
+  geom_boxplot(
+    fill = "#90CAF9",  # light blue
+    color = "black",
+    alpha = 0.7,
+    outlier.colour = "red",
+    outlier.shape = 16,
+    outlier.size = 2
+  ) +
+  labs(
+    y = "Log(Ground Living Area)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.title.y = element_text(face = "bold")
+  )
+
+```
+
+Boxplot for ground living area in @fig-living-area has a longer upper whisker and outliers extending further from the median, indicating right skewness. We applied log transformation in @fig-log-living-area to deal with the skewness, now the distribution looks more normal.
+
+```{r}
+#| label: fig-garage-area
+#| fig-cap: Boxplot of Garage Area.
+#| echo: false
+#| warning: false
+#| message: false
+ggplot(ames_data, aes(y = Garage_Area)) +
+  geom_boxplot(
+    fill = "#F4A261",  # warm orange tone
+    color = "black",
+    alpha = 0.7,
+    outlier.colour = "red",
+    outlier.shape = 16,
+    outlier.size = 2
+  ) +
+  labs(
+    y = "Garage Area (sq ft)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.title.y = element_text(face = "bold")
+  )
+
+```
+```{r}
+#| label: fig-log-garage-area
+#| fig-cap: Boxplot of Log-Transformed Garage Area.
+#| echo: false
+#| warning: false
+#| message: false
+ggplot(ames_data, aes(y = log_Garage_Area)) +
+  geom_boxplot(
+    fill = "#A3D9A5",         # soft green
+    color = "black",
+    alpha = 0.7,
+    outlier.colour = "red",
+    outlier.shape = 16,
+    outlier.size = 2
+  ) +
+  labs(
+    y = "Log(Garage Area)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.title.y = element_text(face = "bold")
+  )
+
+```
+Garage area in @fig-garage-area has a similar distribution as ground living area, showing a right skew. We again apply log transformation in @fig-log-garage-area to address the same skewness issue. The normality of distribution is drastically improved.
+
+```{r}
+#| label: fig-year-built
+#| fig-cap: Distribution of House Construction Years.
+#| echo: false
+#| warning: false
+#| message: false
+ggplot(ames_data, aes(x = Year_Built)) +
+  geom_histogram(
+    bins = 30,
+    fill = "#957DAD",     # soft purple
+    color = "white",
+    alpha = 0.8
+  ) +
+  labs(
+    x = "Year Built",
+    y = "Number of Houses"
+  ) +
+  scale_x_continuous(breaks = seq(1940, max(ames_data$Year_Built), by = 10)) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.title = element_text(face = "bold"),
+    panel.grid.major.y = element_line(color = "grey90")
+  )
+
+```
+For the year built distribution in @fig-year-built, due to the discrete and linear nature of time in, there seem to have high and low extremes which can possibly be explained by economic factors. However, the count differences do not necessarily heavily impact residual variances.
+
+```{r}
+#| label: fig-bedrooms
+#| fig-cap: Distribution of Bedrooms Above Ground.
+#| echo: false
+#| warning: false
+#| message: false
+
+ggplot(ames_data, aes(x = Bedroom_AbvGr)) +
+  geom_bar(
+    fill = "#FFB347",    # soft orange
+    color = "black",
+    alpha = 0.7
+  ) +
+  labs(
+    x = "Bedrooms Above Ground",
+    y = "Number of Houses"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.title = element_text(face = "bold")
+  )
+
+
+```
+
+Houses generally have 2-4 bedrooms above ground, and as we can see in @fig-bedrooms, houses with 3 bedrooms above ground dominate.
+
+```{r}
+#| label: fig-quality
+#| fig-cap: Distribution of Overall Quality Ratings.
+#| echo: false
+#| warning: false
+#| message: false
+
+ggplot(ames_data, aes(x = Overall_Qual)) +
+  geom_bar(
+    fill = "#77DD77",    # soft green
+    color = "black",
+    alpha = 0.7
+  ) +
+  labs(
+    x = "Overall Quality",
+    y = "Number of Houses"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.title = element_text(face = "bold")
+  )
+
+```
+From @fig-quality, most houses have average to good quality grades, with a rare number of excellent grades.
+
+
+
+# Preliminary Model Results {#sec-prelim}
+
+```{r}
+#| label: tbl-3bed
+#| tbl-cap: P-values of Predictors in Final Model
+#| echo: false
+# Create the p-value summary table
+p_value_table <- data.frame(
+  Predictor = c("3 bedrooms above ground", "all other predictors"),
+  `p-value` = c("0.0984", "<0.05")
+)
+
+# Display the table with kable for nice formatting in Quarto
+library(knitr)
+
+kable(p_value_table, align = "lc", caption = "P-values of Predictors in Final Model")
+
+```
+
+Our preliminary model has a log transformed response and the original predictors without transformation. Most predictors are statistically significant, except houses with 3 bedrooms above ground @tbl-3bed.
+
+```{r}
+#| label: fig-resid-gr
+#| fig-cap: Residuals versus Ground Living Area showing mild left-side clustering.
+#| echo: false
+#| warning: false
+#| message: false
+
 ames_data$residuals <- resid(lm_model)
 
-# residual vs predictor plots
-# (to see non transformed version simply remove the 'log_' in x label)
-ggplot(ames_data, aes(x = log_Gr_Liv_Area, y = residuals)) +
-  geom_point(alpha = 0.6) +
-  geom_smooth(method = "lm", se = FALSE, color = "red") +
-  labs(x = "Log Ground Living Area", y = "Residuals") +
-  theme_minimal()
+ggplot(ames_data, aes(x = Gr_Liv_Area, y = residuals)) +
+  geom_point(alpha = 0.6, color = "#4B9CD3") +  # Soft blue for points
+  geom_smooth(method = "lm", se = FALSE, color = "red", linewidth = 1) +
+  labs(
+    x = "Ground Living Area (sq ft)",
+    y = "Residuals"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.title = element_text(face = "bold")
+  )
 
-ggplot(ames_data, aes(x = Year_Built, y = residuals)) +
-  geom_point(alpha = 0.6) +
-  geom_smooth(method = "lm", se = FALSE, color = "red") +
-  labs(x = "Year Built", y = "Residuals") +
-  theme_minimal()
+```
 
-ggplot(ames_data, aes(x = log_Garage_Area, y = residuals)) +
-  geom_point(alpha = 0.6) +
-  geom_smooth(method = "lm", se = FALSE, color = "red") +
-  labs(x = "Log Garage Area", y = "Residuals") +
-  theme_minimal()
 
-# boxplot for categorical for better interpretation
+```{r}
+#| label: fig-resid-gar
+#| fig-cap: Residuals versus Garage Area showing left-side clustering and heteroscedasticity.
+#| echo: false
+#| warning: false
+#| message: false
+
+ggplot(ames_data, aes(x = Garage_Area, y = residuals)) +
+  geom_point(alpha = 0.6, color = "#4B9CD3") +
+  geom_smooth(method = "lm", se = FALSE, color = "red", linewidth = 1) +
+  labs(
+    x = "Garage Area (sq ft)",
+    y = "Residuals"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    axis.title = element_text(face = "bold")
+  )
+
+```
+
+In the ground living area residual plot @fig-resid-gr, residuals appear mostly random with slight clustering toward the left, indicating potential heteroscedasticity. 
+For the garage area residual plot @fig-resid-gar, the residuals also cluster more on the left, also suggesting potential correlated errors or heteroscedasticity.
+These patterns suggested that homoscedasticity assumptions were not fully satisfied.
+
+
+```{r}
+#| label: fig-box-bed
+#| fig-cap: Boxplot of residuals by number of bedrooms above ground.
+#| echo: false
+#| warning: false
+#| message: false
+
 ggplot(ames_data, aes(x = as.factor(Bedroom_AbvGr), y = residuals)) +
-  geom_boxplot() +
-  labs(x = "Bedrooms Above Ground", y = "Residuals") +
-  theme_minimal()
+  geom_boxplot(fill = "#FDB462", alpha = 0.7) +
+  labs(
+    x = "Bedrooms Above Ground",
+    y = "Residuals"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    axis.title = element_text(face = "bold")
+  )
+
+```
+
+```{r}
+#| label: fig-box-qual
+#| fig-cap: Boxplot of residuals by overall quality rating.
+#| echo: false
+#| warning: false
+#| message: false
 
 ggplot(ames_data, aes(x = as.factor(Overall_Qual), y = residuals)) +
-  geom_boxplot() +
-  labs(x = "Overall Quality", y = "Residuals") +
-  theme_minimal()
+  geom_boxplot(fill = "#B3DE69", alpha = 0.7) +
+  labs(
+    x = "Overall Quality",
+    y = "Residuals"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    axis.title = element_text(face = "bold")
+  )
+
 ```
 
-Clustering and skewness remained in the residuals, particularly in the lower value range. Additional plots, such as fitted vs. residuals and Q-Q plots, confirmed deviations from ideal assumptions, leading to further transformations and refinements in the next modeling stage.
+For the residual plots for both the bedrooms above ground @fig-box-bed and overall quality @fig-box-qual. By restricting the number of bedrooms to between two and four, and limiting quality grades to average and above. We achieve a more consistent interquartile range across predictor levels. While this does not ensure elimination of potential violations in all relationships, it reduces the extreme deviation visibly, improving stability.
+
 
 ```{r}
-# get fitted values
+#| label: fig-resid-year
+#| fig-cap: Residuals versus Year Built showing mild structure across time.
+#| echo: false
+#| warning: false
+#| message: false
+
+ggplot(ames_data, aes(x = Year_Built, y = residuals)) +
+  geom_point(alpha = 0.6, color = "#4B9CD3") +
+  geom_smooth(method = "lm", se = FALSE, color = "red", linewidth = 1) +
+  labs(
+    x = "Year Built",
+    y = "Residuals"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    axis.title = element_text(face = "bold")
+  )
+
+```
+
+```{r}
+#| label: fig-resid-fitted
+#| fig-cap: Residuals versus fitted values, assessing model fit and heteroscedasticity.
+#| echo: false
+#| warning: false
+#| message: false
+
 ames_data$fitted_values <- fitted(lm_model)
 
-# fitted vs residual plot
 ggplot(ames_data, aes(x = fitted_values, y = residuals)) +
-  geom_point(alpha = 0.6) +
-  geom_smooth(method = "lm", se = FALSE, color = "red") +
-  labs(x = "Fitted Values", y = "Residuals") +
-  theme_minimal()
+  geom_point(alpha = 0.6, color = "#4B9CD3") +
+  geom_smooth(method = "lm", se = FALSE, color = "red", linewidth = 1) +
+  labs(
+    x = "Fitted Values",
+    y = "Residuals"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    axis.title = element_text(face = "bold")
+  )
+
+```
+
+For the year built residual plot @fig-resid-year, although discrete, it is best treated as a continuous variable since time is an increasing measure. We restricted the data to post-1940 to exclude outliers. The residual spread appears random year by year, showing no visible pattern. 
+For the fitted value residual plot @fig-resid-fitted, similar to the ground living area plot, slight clustering on the left which also suggests potential heteroscedasticity.
+
+
+```{r}
+#| label: fig-response-fitted
+#| fig-cap: Fitted values versus log sale price, evaluating model prediction alignment.
+#| echo: false
+#| warning: false
+#| message: false
+
+ggplot(ames_data, aes(x = fitted_values, y = log_Sale_Price)) +
+  geom_point(alpha = 0.6, color = "#4B9CD3") +
+  geom_smooth(method = "lm", se = FALSE, color = "red", linewidth = 1) +
+  labs(
+    x = "Fitted Values",
+    y = "Log Sale Price"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    axis.title = element_text(face = "bold")
+  )
+
+```
+
+For the response versus fitted plot @fig-response-fitted, the points scatter mostly random along the diagonal, though the left side slightly heavier, consistent with previous residual plot observations, indicating some deviations from randomness.
+
+```{r}
+#| label: fig-qq
+#| fig-cap: Q-Q plot of residuals to assess normality.
+#| echo: false
+#| warning: false
+#| message: false
+
+
+ggplot(data = data.frame(residuals = resid(lm_model)), aes(sample = residuals)) +
+  stat_qq(color = "#4B9CD3") +
+  stat_qq_line(color = "red", linewidth = 1) +
+  labs(
+    x = "Theoretical Quantiles",
+    y = "Sample Quantiles"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    axis.title = element_text(face = "bold")
+  )
+
 ```
 
 ```{r}
-# qq plot with qqline added for better visual
-ggplot(data = data.frame(residuals = resid(lm_model)), aes(sample = residuals)) +
-  stat_qq() +
-  stat_qq_line(color = "red") +
-  labs(x = "Theoretical Quantiles", y = "Sample Quantiles") +  
-  theme_minimal()
+#| label: fig-pair
+#| fig-cap: Scatterplot matrix of key predictors and response variable.
+#| echo: false
+#| warning: false
+#| message: false
 
-# pairwise plot for all predictors
-plot_data <- ames_data[, c("log_Sale_Price", "log_Gr_Liv_Area", "log_Garage_Area", 
+plot_data <- ames_data[, c("Sale_Price", "Gr_Liv_Area", "Garage_Area", 
                            "Year_Built", "Bedroom_AbvGr", "Overall_Qual")]
-# rename the labels
-colnames(plot_data) <- c("Log Sale Price", 
-                         "Log Living Area", 
-                         "Log Garage Area", 
+
+colnames(plot_data) <- c("Sale Price", 
+                         "Living Area", 
+                         "Garage Area", 
                          "Year Built", 
                          "Bedrooms AbvGr", 
                          "Overall Quality")
+
 pairs(plot_data)
+
+```
+
+After log-transforming the response @fig-qq, the right-skewed tail is significantly reduced but still shows some deviations, indicating skewness still persists. A strong left skew suggests the residuals deviates from normal, potentially violating normality assumption. 
+In the pairwise plot @fig-pair, the relationship between ground living area and garage area shows both a linear trend and scattered cluster, suggesting multiple underlying relationships violating linearity. Other variable relationships appear either random or linear, largely aligning with the assumption.
+
+
+# Model Selection {#sec-model}
+
+Based on the diagnostic issues from @sec-prelim, several improvements were made to build a more solid model for predicting house prices, including transformation, data restrictions, and data interpretation.
+
+## Transformations on Predictor Variables
+Both ground living area and garage area are log transformed to address right skewed distributions and reduce heteroscedasticity observed from preliminary analysis. The transformations showed that the residuals are more evenly scattered, drastically eliminating previous violations. With the garage area filtered to greater than zero, we avoid undefined values from log transformation.
+```{r}
+#| label: fig-log-gr
+#| fig-cap: Residuals plotted against log-transformed ground living area to assess linearity and homoscedasticity.
+#| echo: false
+#| warning: false
+#| message: false
+
+ames_data$residuals2 <- resid(lm_trans_model)
+
+ggplot(ames_data, aes(x = log_Gr_Liv_Area, y = residuals2)) +
+  geom_point(alpha = 0.6, color = "#4B9CD3") +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(
+    x = "Log Ground Living Area",
+    y = "Residuals"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(axis.title = element_text(face = "bold"))
+
 ```
 
 ```{r}
-# fitted vs response plot
-ggplot(ames_data, aes(x = fitted_values, y = log_Sale_Price)) +
-  geom_point(alpha = 0.6) +
+#| label: fig-log-gar
+#| fig-cap: Residuals plotted against log-transformed garage area, examining model fit and variance consistency.
+#| echo: false
+#| warning: false
+#| message: false
+
+ggplot(ames_data, aes(x = log_Garage_Area, y = residuals2)) +
+  geom_point(alpha = 0.6, color = "#4B9CD3") +
   geom_smooth(method = "lm", se = FALSE, color = "red") +
-  labs(x = "Fitted Values", y = "Log Sale Price") +
-  theme_minimal()
+  labs(
+    x = "Log Garage Area",
+    y = "Residuals"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(axis.title = element_text(face = "bold"))
+
 ```
 
-These diagnostic results motivated the more refined model specification that follows.
 
-# Model Selection
+```{r}
+#| label: tbl-corr
+#| tbl-cap: Correlation Matrix of Numerical Predictors
+#| echo: false
+cor_matrix <- data.frame(
+  row.names = c("Log Ground Living Area", "Log Garage Area", "Year Built"),
+  `Log Ground Living Area` = c(1.000, 0.518, 0.421),
+  `Log Garage Area` = c(0.518, 1.000, 0.545),
+  `Year Built` = c(0.421, 0.545, 1.000)
+)
 
-[Content for this section continues below — to be added with the next update.]
+kable(cor_matrix, digits = 3)
 
-# Final Model Inference and Results
+```
 
-[Content for this section continues below — to be added with the next update.]
+# Final Model Inference and Results {#sec-final}z
+```{r}
+#| label: tbl-final
+#| tbl-cap: Final Model Coefficients with 95% CI and p-values
+#| echo: false
+final_model_table <- data.frame(
+  Predictor = c("(Intercept)", "Log Ground Living", "Log Garage Area", "Year Built",
+                "Bedrooms Above Ground: 3", "Bedrooms Above Ground: 4",
+                "Overall Quality: Above Average", "Overall Quality: Good",
+                "Overall Quality: Very Good", "Overall Quality: Excellent"),
+  Estimate = c(2.6813, 0.5325, 0.1480, 0.0023, -0.0156, -0.0721, 0.0322, 0.1131, 0.2689, 0.4833),
+  `Std. Error` = c(0.4588, 0.0178, 0.0122, 0.0002, 0.0080, 0.0134, 0.0094, 0.0122, 0.0151, 0.0204),
+  `95% CI` = c("[1.7816, 3.5810]", "[0.4976, 0.5674]", "[0.1240, 0.1719]", "[0.0018, 0.0028]",
+               "[-0.0313, 0.0001]", "[-0.0984, -0.0459]", "[0.0138, 0.0507]", "[0.0892, 0.1370]",
+               "[0.2392, 0.2986]", "[0.4432, 0.5233]"),
+  `p-value` = c("<0.0001", "<0.0001", "<0.0001", "<0.0001", "0.0515", "<0.0001", "0.0006", "<0.0001", "<0.0001", "<0.0001")
+)
 
-# Discussion and Conclusion
+kable(final_model_table, align = "l")
 
-[Content for this section continues below — to be added with the next update.]
+```
 
-# Author Contributions
 
-**Haruka Suzuki**  
-Writing, dataset research, peer-reviewed literature, introduction, data description, preliminary model results, model selection
+# Discussion and Conclusion {#sec-discussion}
 
-**Andy Jiang**  
-Writing, R code (data filtering, diagnostics, modelling, transformations, plots and tables, summary statistics), preliminary model results, model selection, final model inference and results, discussion and conclusion
-
+\newpage
 # References
-
-Kuhn, Max, and Kjell Johnson. *AmesHousing: The Ames Iowa Housing Data*. R Package Version 0.2.1, 2024. https://cran.r-project.org/web/packages/AmesHousing/AmesHousing.pdf.  
-
-Shukla, Shivani. "Predicting Housing Prices Using Multiple Linear Regression: A Comprehensive Analysis." *JETIR*, vol. 11, no. 3, Mar. 2024. https://www.jetir.org/papers/JETIR2403593.pdf.  
-
-Ye, Qiongwei. "House Price Prediction Using Machine Learning for Ames, Iowa." *Proceedings of the 4th International Conference on Signal Processing and Machine Learning*, 2024. https://www.ewadirect.com/proceedings/ace/article/view/11040/pdf.  
-
-Han, Yueting. "Price Prediction of Ames Housing Through Advanced Regression Techniques." *BCP Business & Management*, vol. 38, 2023, Department of Statistics and Data Science, University of California, Santa Barbara. https://www.researchgate.net/publication/369437029_Price_Prediction_of_Ames_Housing_Through_Advanced_Regression_Techniques.  
-
-GeeksforGeeks. "Multiple Linear Regression Using R to Predict Housing Prices." 10 Apr. 2023. www.geeksforgeeks.org/multiple-linear-regression-using-r-to-predict-housing-prices/.  
-
-Gupta, Shubham. "Building a California Housing Price Prediction Model Using Gradient Boosting and Feature Selection: A Comprehensive Guide." *NGAIF*, 2024.
