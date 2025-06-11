@@ -77,6 +77,8 @@ There are several peer-reviewed papers that have studied this topic. [@shukla202
 
 Previous research suggests that linear regression is an effective tool for examining the direct relationships between multiple predictors (such as housing attributes) and the response variable (sales price) [@geeksforgeeks2023mlr]. By modeling how factors like size, age, quality, and market trends affect house prices, linear regression quantifies these relationships and provides clear, interpretable coefficients. This makes it a widely used and suitable method for this study, aiming to offer insights into the factors that influence home prices in Ames, Iowa, with a focus on houses in average or above condition with at least two bedrooms.
 
+This paper is organized as follows. In @sec-data, we describe the dataset, explain the log transformation of the response variable, and explore the distributions of key predictors. @sec-prelim presents our initial regression model using untransformed predictors, highlights assumption violations through residual analysis, and motivates further model refinement. In @sec-model, we describe the process of model selection and improvements, including log-transformations and categorical filtering, and show how these changes address diagnostic issues. @sec-final summarizes the results from the final regression model, interprets each coefficient, evaluates model performance, and compares the findings to existing literature. Finally, in @sec-discussion, we draw key conclusions, offer recommendations for stakeholders, discuss limitations, and suggest directions for future research.
+
 # Data Description {#sec-data}
 The dataset used in this analysis is from the Ames Housing data available through the AmesHousing R package [@kuhn2024ameshousing]. Originally curated by Dean De Cock for use in data science education. The original dataset describes the sale of individual residential properties in Ames, Iowa, from 2006 to 2010 and includes 82 variables related to various attributes of each property.
 
@@ -135,29 +137,42 @@ After the log transformation in @fig-log-sale, sale price is more normally distr
 #| label: tbl-summary
 #| tbl-cap: Predictors, Measurement Units, Restrictions, and Literature Mentions.
 #| echo: false
+#| warning: false
+#| message: false
+
 predictor_table <- data.frame(
   Predictor = c(
-    "Ground Living Area", "Garage Area", "Year House Built",
-    "Bedrooms Above Ground", "Overall Quality of Material and Finish"
+    "Ground Living Area",
+    "Garage Area",
+    "Year House Built",
+    "Bedrooms Above Ground",
+    "Overall Quality of Material and Finish"
   ),
   Measurement = c(
-    "Square feet", "Square feet", "Year", "Count",
-    "Quality Grade\n(10 Levels: Very_Poor to Very_Excellent)"
+    "Square feet",
+    "Square feet",
+    "Year",
+    "Count",
+    "Quality Grade<br>(10 Levels: Very_Poor to Very_Excellent)"
   ),
   Restriction = c(
-    "N/A", "Garage_Area > 0", "Year_Built >= 1940",
-    "Two to four bedrooms\nc(2, 3, 4)",
-    "Average to Excellent grade\nc(\"Average\", \"Above_Average\", \"Good\", \"Very_Good\", \"Excellent\")"
+    "N/A",
+    "Garage_Area > 0",
+    "Year_Built >= 1940",
+    "Two to four bedrooms<br>c(2, 3, 4)",
+    "Average to Excellent grade<br>c(\"Average\", \"Above_Average\", \"Good\",<br>\"Very_Good\", \"Excellent\")"
   ),
   Mentioned = c(
-    "Paper 2\nPaper 3", "Paper 2\nPaper 3", "Paper 3", "Paper 1", "Paper 2\nPaper 3"
-  )
+    "Paper 2, Paper 3",
+    "Paper 2, Paper 3",
+    "Paper 3",
+    "Paper 1",
+    "Paper 2, Paper 3"
+  ),
+  stringsAsFactors = FALSE
 )
 
-kable(predictor_table, align = "l")
-
-
-
+kable(predictor_table, format = "html", escape = FALSE, align = "l")
 ```
 
 According to [@shukla2024mlr], the predictor variables reflect the intrinsic value and desirability of the house, directly tied to the house’s sale price. These variables capture essential aspects of a property’s value and appeal, which are key determinants of its market price.
@@ -583,7 +598,7 @@ In the pairwise plot @fig-pair, the relationship between ground living area and 
 Based on the diagnostic issues from @sec-prelim, several improvements were made to build a more solid model for predicting house prices, including transformation, data restrictions, and data interpretation.
 
 ## Transformations on Predictor Variables
-Both ground living area and garage area are log transformed to address right skewed distributions and reduce heteroscedasticity observed from preliminary analysis. The transformations showed that the residuals are more evenly scattered, drastically eliminating previous violations. With the garage area filtered to greater than zero, we avoid undefined values from log transformation.
+Both ground living area in @fig-log-gr and garage area in @fig-log-gar are log transformed to address right skewed distributions and reduce heteroscedasticity observed from preliminary analysis. The transformations showed that the residuals are more evenly scattered, drastically eliminating previous violations. With the garage area filtered to greater than zero, we avoid undefined values from log transformation.
 ```{r}
 #| label: fig-log-gr
 #| fig-cap: Residuals plotted against log-transformed ground living area to assess linearity and homoscedasticity.
@@ -624,11 +639,152 @@ ggplot(ames_data, aes(x = log_Garage_Area, y = residuals2)) +
 
 ```
 
+## Categorical Variables and Restrictions
+```{r}
+#| label: fig-resid2-vs-bedroom
+#| fig-cap: Boxplot of residuals from the transformed model by number of bedrooms above ground.
+#| echo: false
+#| warning: false
+#| message: false
 
+ggplot(ames_data, aes(x = as.factor(Bedroom_AbvGr), y = residuals2)) +
+  geom_boxplot(fill = "#90CAF9", color = "black", alpha = 0.7) +
+  labs(
+    x = "Bedrooms Above Ground",
+    y = "Residuals"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(axis.title = element_text(face = "bold"))
+
+```
+```{r}
+#| label: fig-resid2-vs-quality
+#| fig-cap: Boxplot of residuals from the transformed model by overall quality rating.
+#| echo: false
+#| warning: false
+#| message: false
+
+ggplot(ames_data, aes(x = as.factor(Overall_Qual), y = residuals2)) +
+  geom_boxplot(fill = "#AED581", color = "black", alpha = 0.7) +
+  labs(
+    x = "Overall Quality",
+    y = "Residuals"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(axis.title = element_text(face = "bold"))
+
+```
+And we continue to limit the number of bedrooms to two, three, and four in @fig-resid2-vs-bedroom, and only include houses with rating from average to excellent in @fig-resid2-vs-quality. The restrictions not only preserved the stability of residuals, but also improved the skewness in the bedroom levels in the updated model with transformed predictors.
+
+## Outliers
+```{r}
+#| label: fig-resid2-vs-year
+#| fig-cap: Scatterplot of residuals from the transformed model versus year built, showing no strong temporal structure.
+#| echo: false
+#| warning: false
+#| message: false
+
+
+ggplot(ames_data, aes(x = Year_Built, y = residuals2)) +
+  geom_point(alpha = 0.6, color = "#4B9CD3") +
+  geom_smooth(method = "lm", se = FALSE, color = "red", linewidth = 1) +
+  labs(
+    x = "Year Built",
+    y = "Residuals"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(axis.title = element_text(face = "bold"))
+
+```
+
+
+With the same data filtering to restrict houses from 1940 or later to remove older houses which likely are outliers in the real world due to depreciation. The residual spread continues to appear random year by year, showing no visible pattern (@fig-resid2-vs-year). However, since this variable is discrete, plus we treat it as a continuous variable since time is an increasing measure, the gaps between some years can be explained by economic factors outside the scope of regression analysis. Which is not a concern for violation of assumptions.
+
+
+## Fitted Values
+
+```{r}
+#| label: fig-resid2-vs-fitted
+#| fig-cap: Plot of residuals versus fitted values from the transformed model. A random scatter pattern supports homoscedasticity.
+#| echo: false
+#| warning: false
+#| message: false
+
+
+ames_data$fitted_values2 <- fitted(lm_trans_model)
+
+ggplot(ames_data, aes(x = fitted_values2, y = residuals2)) +
+  geom_point(alpha = 0.6, color = "#4B9CD3") +
+  geom_smooth(method = "lm", se = FALSE, color = "red", linewidth = 1) +
+  labs(x = "Fitted Values", y = "Residuals") +
+  theme_minimal(base_size = 13) +
+  theme(axis.title = element_text(face = "bold"))
+
+```
+For the fitted value residual plot in @fig-resid2-vs-fitted, after the log transformations on garage area and ground living area, the spread now displays no visible pattern and seems randomly scattered.
+
+```{r}
+#| label: fig-fitted-vs-logsale
+#| fig-cap: Plot of fitted values versus log-transformed sale prices. The close alignment with the red trend line indicates good model fit.
+#| echo: false
+#| warning: false
+#| message: false
+
+ggplot(ames_data, aes(x = fitted_values2, y = log_Sale_Price)) +
+  geom_point(alpha = 0.6, color = "#4B9CD3") +
+  geom_smooth(method = "lm", se = FALSE, color = "red", linewidth = 1) +
+  labs(x = "Fitted Values", y = "Log Sale Price") +
+  theme_minimal(base_size = 13) +
+  theme(axis.title = element_text(face = "bold"))
+
+```
+For the response versus fitted plot in @fig-fitted-vs-logsale, the points now are more randomly scattered along the diagonal, as a result of the log transformation on garage area and ground living area, which reduced the previous deviation.
+
+## Normality and Predictor Relationship
+```{r}
+#| label: fig-qq-residuals
+#| fig-cap: QQ plot of residuals from the final model. The points lie close to the red line, supporting normality.
+#| echo: false
+#| warning: false
+#| message: false
+
+ggplot(data = data.frame(residuals = resid(lm_trans_model)), aes(sample = residuals)) +
+  stat_qq(color = "#4B9CD3") +
+  stat_qq_line(color = "red", linewidth = 1) +
+  labs(x = "Theoretical Quantiles", y = "Sample Quantiles") +
+  theme_minimal(base_size = 13) +
+  theme(axis.title = element_text(face = "bold"))
+
+```
+After log-transforming the response, the right-skewed tail is reduced (@fig-qq-residuals). A left skew still persists after transforming the two predictors suggesting deviations from normal, even though the residual plots do not show it. This suggests that the model slightly underestimates the prices of the lower valued houses. Likely from unmeasured factors like investors perception, which can disproportionate the lower end houses. From the QQ-plot we observed a left tail deviation that could not be addressed even after we performed the transformations which could be a potential limitation to our study. Despite this left tail deviation, the overall distribution is still reasonably normal, with no visible violation from residual patterns.
+
+
+```{r}
+#| label: fig-pairs-predictors
+#| fig-cap: Pairwise scatterplots for predictors and log sale price. Clear linear relationships are observed, especially with log-transformed variables.
+#| echo: false
+#| warning: false
+#| message: false
+plot_data <- ames_data[, c("log_Sale_Price", "log_Gr_Liv_Area", "log_Garage_Area", 
+                           "Year_Built", "Bedroom_AbvGr", "Overall_Qual")]
+
+colnames(plot_data) <- c("Log Sale Price", 
+                         "Log Living Area", 
+                         "Log Garage Area", 
+                         "Year Built", 
+                         "Bedrooms AbvGr", 
+                         "Overall Quality")
+
+pairs(plot_data)
+
+```
 ```{r}
 #| label: tbl-corr
 #| tbl-cap: Correlation Matrix of Numerical Predictors
 #| echo: false
+#| warning: false
+#| message: false
+
 cor_matrix <- data.frame(
   row.names = c("Log Ground Living Area", "Log Garage Area", "Year Built"),
   `Log Ground Living Area` = c(1.000, 0.518, 0.421),
@@ -640,11 +796,18 @@ kable(cor_matrix, digits = 3)
 
 ```
 
-# Final Model Inference and Results {#sec-final}z
+In the pairwise plot (@fig-pairs-predictors), the relationship between year built and other variables appears stepped or uneven. This is expected, as year built is a discrete variable treated as continuous, which naturally leads to gaps between data points. Other pairwise comparisons showed weak linear trends or randomness, suggesting that relationships are approximately linear or lack strong patterns. We also examined the correlation matrix (@tbl-corr) for numeric variables and found no high correlations, indicating that multicollinearity is unlikely. Based on these findings, we retained all selected predictors. After applying necessary transformations and restrictions, none of the variables violated model assumptions, resulting in a cleaner and more interpretable model.
+
+# Final Model Inference and Results {#sec-final}
+
+## Model Summary
 ```{r}
 #| label: tbl-final
 #| tbl-cap: Final Model Coefficients with 95% CI and p-values
 #| echo: false
+#| warning: false
+#| message: false
+
 final_model_table <- data.frame(
   Predictor = c("(Intercept)", "Log Ground Living", "Log Garage Area", "Year Built",
                 "Bedrooms Above Ground: 3", "Bedrooms Above Ground: 4",
@@ -662,8 +825,123 @@ kable(final_model_table, align = "l")
 
 ```
 
+After testing multiple specifications and addressing potential assumption violations, our final model includes the predictors in @tbl-final: log ground living area, log garage area, year built, bedrooms above ground, and overall quality. The response variable is the log-transformed sale price which we use to stabilize variance and address skewness from the start.
+
+## Coefficients Interpretation
+
+### Intercept
+The intercept (2.6813) represents the predicted log sale price of a house that has the base level of each predictor. This corresponds to a house with 2 bedrooms, average quality rating, and zero values for the continuous predictors (i.e., log ground living area, log garage area, and year built). The intercept itself may not be meaningful on its own, but it serves as the base value from which other effects are added.
+
+### Log Ground Living Area
+The coefficient for log of ground living area is 0.5325. This means that a 1% increase in the ground living area is related with about that amount (0.5325%) increase in sale price, holding all other variables constant. Note that in our case the variable is log transformed, the interpretation changes from absolute nominal change to percent change. This is one of the most important predictors in our model, suggesting the idea that the overall size of a house is a critical factor in determining the price value.
+
+### Log Garage Area
+The coefficient for log of garage area is 0.1480, which again means that a 1% increase in garage area increases the sale price by 0.1480%. While the effect is smaller than the ground living area, it is still positive meaning it is still statistically significant. This implies that investors/buyers still value garage area, likely due to the practicality like storage of extra things not put in house, or space to install protections for cars.
+
+### Year Built
+The estimate of 0.0023 for year built suggests that on average each additional year of construction adds 0.23% to the log price of the house. This reflects that people prefer newer houses which are usually built with more modern materials, design and inside features. This coefficient is small but precise, with a very narrow confidence interval.
+
+### Bedrooms Above Ground
+These coefficients are interpreted relative to the base of two bedrooms above ground. The effect of having three bedrooms is slightly negative (-0.0156), and four bedrooms an even larger negative effect (-0.0721), both compared to two bedroom houses. While the coefficient for three bedrooms is above the 0.05 threshold by a tiny bit, it is considered not significant enough, but the result for four bedrooms is clearly significant. These results suggest that within our filtered sample of average to excellent quality houses, more bedrooms does not necessarily always mean more value. It could reflect trade-offs like smaller living spaces per room for example.
+
+### Overall Quality
+Average quality as the base level:
+
+- "Above Average" houses sell for 3.22% more  
+- "Good" houses sell for 11.31% more  
+- "Very Good" houses sell for 26.89% more  
+- "Excellent" houses sell for 48.33% more
+
+The increasing pattern absolutely reflects the importance of quality of material and craftsmanship in houses. The results show a strong and consistent upward trend in sale price as quality improves, and all levels of quality are statistically significant with approximately consistent narrowness of confidence intervals through all levels.
+
+## Comparison to Literature
+The results of our model align well with findings from previous studies. Both [@ye2024ml] and [@han2023regression] say that ground living area, garage area, and overall quality of houses were the most influential predictors of house prices in the Ames dataset. Our final model results show this: ground living area had the highest coefficient among continuous predictors, and overall quality shows the largest effect sizes across the model. Han also reported that newer houses have higher prices, which aligns with our positive and significant coefficient of house built.
+
+The only potential meaningful difference from the literature is the negative relationship between bedroom count and price. [@shukla2024mlr] found that more bedrooms were related with higher prices, likely because bedroom count can be an indirect measure for size of house. However, since our model includes ground living area, the added value of additional bedrooms may be less direct, hence or even negative if more bedrooms means smaller rooms or less free space. This difference highlights the importance of considering multiple dimensions of size and layout when modelling house value.
+
+Additionally, studies from literature used machine learning models which are more complex and can potentially sacrifice some interpretability for predictors compared to our linear model, that offers straightforward interpretations of how each variable contributes to house price, which is useful for real world policy making and buyer decisions.
+
+## Model Performance
+```{r}
+#| label: tbl-model-performance
+#| tbl-cap: >
+#|   Model performance statistics: R-squared, Adjusted R-squared, and AIC.
+#| echo: false
+#| warning: false
+#| message: false
+
+performance_metrics <- data.frame(
+  Metric = c("R-squared", "Adjusted R-squared", "AIC"),
+  Value = c(0.819, 0.8182, -2184.5)
+)
+
+kable(performance_metrics, align = "lc", col.names = c("", ""))
+
+```
+
+Our final model achieves strong statistical performance (@tbl-model-performance). The R-squared value is 0.819, meaning that approximately 81.9% of the variation in log sale price is explained by the predictors. This is a strong level of explanatory power especially in housing/real estate modelling where prices are influenced by many complex and often unobservable factors.
+
+The Adjusted R-squared is 0.8182 which is very close to the R-squared. This indicates that our model does not have overfitting problems despite having many predictors. Each included variable adds meaningful explanatory power without increasing the complexity of the model unnecessarily.
+
+The Akaike Information Criterion (AIC) is -2184.5, which is a strong indicator of model fit. Lower values of AIC suggest better trade-offs between fit and complexity. The high negative value suggests the model performs very well on the log transformed response. If we kept the predictors untransformed with skewed distribution like in the preliminary results, the AIC would likely be a lot higher.
+
+In addition, previous visual inspection of residual plots supports the model’s performance. Residuals are randomly scattered in plots vs. fitted values, and no obvious non-linear patterns which suggest heteroscedasticity are present. While the Q-Q plot has some left tail deviation as explained in the previous section, suggesting possible underestimation of prices for lower value houses, the overall distribution is again reasonably normal and does not have major concern.
+
+Overall, our final model shows that our chosen predictors significantly affect house prices. The log transformed variables allow for percentage-based interpretation which gives practical insights into how each attribute contributes to price. The model performance is strong as shown by the statistics, and the results are mostly consistent with literature findings.
+
 
 # Discussion and Conclusion {#sec-discussion}
 
+Our study explores the relationship between house attributes and the sale prices of houses in Ames, Iowa. Using our carefully filtered dataset and a multiple linear regression model, we focused on how factors like ground living area, garage area, number of bedrooms, year built, and overall quality influence house prices. All predictors were chosen based on the literature we found, exploratory data analysis, and real world knowledge, with transformations and filtering applied as needed to meet linear regression assumptions.
+
+## Main Conclusions
+Our findings from our final model support several main conclusions. First, ground living area comes out as the most influential continuous predictor. A 1% increase in ground living area is related to about a 0.53% increase in house price, holding other variables constant. This aligns with real world economic expectations and confirms that investors/buyers value interior living space very highly.
+
+Second, overall quality is strongly positively related to price. Compared to houses with average ratings, those with excellent quality ratings have nearly a 48.3% premium on price. This clear rise observed across the quality levels suggests that buyers are highly sensitive to the materials, finish, and overall craftsmanship of houses.
+
+Third, garage area also contributes positively to price, though its effect is less strong. A 1% increase in garage area corresponds to about a 0.15% increase in house price. While garage areas are not as prioritized for valuation as living space or quality, they still play an important role especially in real world contexts where car ownership is the norm.
+
+Also, year built also showed a significant but small effect, each additional year corresponds to about a 0.23% increase in house price. This supports the general belief that newer houses are more desirable due to more modern finishes, better layouts, and more energy efficiency. However, the small size of this coefficient suggests that age alone does not dictate price, it must be considered along with quality and size as well.
+
+The most surprising finding was the negative relationship between bedroom count and price. In our filtered sample of houses with two to four bedrooms, having three or four bedrooms is associated with slightly lower prices than having just two. This result is counterintuitive and appears to contradict common housing assumptions and beliefs. Again, It may be explained by trade-offs in design, houses with more bedrooms may have smaller individual rooms or less free open space, reducing the value. Or, it may show buyer preferences in this particular market in Iowa.
+
+## Supporting Evidence
+Our findings are mostly consistent with prior research. [@han2023regression] and [@ye2024ml], who both analyzed the same dataset using more complex models, says that ground living area, garage area, overall quality, and year built as the most important variables in predicting house prices. Our model confirmed this conclusion with a linear model, showing that even simple models can offer high explanatory power and valuable conclusions when the model is correctly specified.
+
+The upward trend seen in overall quality, from average to excellent, supports findings from [@ye2024ml] and [@shukla2024mlr], who emphasized the importance of qualitative attributes in driving buyer behavior. In a real world housing market, buyers are willing to pay high premiums for houses that are seen to require less maintenance or improvements and that offer more luxurious and durable finishes.
+
+As from earlier, our result about bedrooms deviates from the trend found by [@shukla2024mlr], where bedroom count had a clear positive impact on price. We believe this is due to our model already controlling the overall size through ground living area, which makes additional bedrooms redundant or maybe even detrimental in value. This highlights the importance of understanding how multiple predictors interact in linear regression.
+
+## Recommendations
+These findings can be used to help with decision-making by house sellers, buyers, and policymakers.
+
+For sellers, investing in quality improvements may offer a higher return on investment than simply adding rooms or expanding garage space. Upgrades to materials, finishes, or even design may increase a home's market value more effectively than increasing bedroom count or building other extensions. Similarly, emphasizing free living space, rather than maximizing total area may align better with investor preferences.
+
+For buyers, the results suggest that buyers often pay premiums for subjective things like perceived quality, not just objective attributes like size. This shows the importance of evaluating a house fully rather than simply by number of bedrooms or total area.
+
+For policymakers, the findings may justify incentives for focusing on quality of construction of houses rather than density alone. Encouraging development of wellbuilt midsize houses rather than maximizing floor capacity may better align with market preferences and produce more sustainable long-term housing value.
+
+## Improvements
+While our model performed well, achieving an R-squared of 0.819, and Adjusted R-squared of 0.8182, and an AIC of -2184.5, it is not without limitations.
+
+First, we rely on structural features and do not include location based factors, which are known to heavily influence house prices. Attributes like neighborhood for example are missing from the model. Including geographic information or neighborhood level variables can definitely improve the model’s explanatory power and capture important omitted variables.
+
+Second, some variables we removed from filtering may still play a meaningful role in price. While we excluded many variable levels in favour of the most desired ones, a more flexible model might still capture the meaningful effect of them, especially in areas that are less urban.
+
+Third, the left tail deviation in the Q-Q plot suggests the model underestimates prices for the lower priced houses. This could be due to exclusion of lower quality houses from our dataset, omitted variables affecting undervalued houses, and nonlinear effects that are not captured by linear models.
+
+Although the residual plots suggest our model assumptions are met, using more modeling techniques could explore whether nonlinear patterns or interactions between predictors can yield better accuracy in predicting.
+
+Additionally, our analysis uses data from 2006 to 2010. Housing market has changed quite a lot since then, so the exact coefficients may not generalize to present day valuations. However, the relative importance of variables like size and quality should still remain consistent over time.
+
+Finally, using a multilinear regression model for interpretability and transparency is our main goal within the course scope. While machine learning models used in the literature may outperform, they can lack interpretability and require more complex techniques. The trade-off is justified in our case because our main goal was to not only forecast but also understand housing prices.
+
+## Closing Summary
+In conclusion, our analysis highlights the relative importance of different house attributes in predicting house prices in Ames, Iowa. Ground living area and overall quality are the strongest drivers of price, while garage area and year built also play important roles. The number of bedrooms unexpectedly has a weak or even negative relationship with price when controlling for size and quality. These findings are supported by peer-reviewed literature and offer useful insights in the real world.
+
+Our model has both accuracy and interpretability balanced, explaining over 80% of the variance in sale prices of houses while maintaining clear and meaningful coefficient interpretations. With additional location based data and more modelling techniques, future studies can build from this baseline to better understand housing markets both in Ames and the entire world.
+
+
 \newpage
+
 # References
