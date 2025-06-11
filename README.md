@@ -52,6 +52,3 @@ The primary goal of this project is to model and understand how various housing 
 - **R**
   - `tidyverse` – data manipulation
   - `ggplot2` – visualization
-
-## 📁 Repository Structure
-
