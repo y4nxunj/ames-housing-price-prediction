@@ -1,7 +1,4 @@
 ---
-#| include: false
-#| warning: false
-#| message: false
 title: "Ames Housing Price Prediction"
 subtitle: "Analysis of Structural Housing Features and Sale Prices"
 author: 
@@ -9,7 +6,7 @@ author:
 thanks: "Code and data are available at: https://github.com/AndyYanxunJiang/ames-housing-price-prediction."
 date: today
 date-format: long
-abstract: "This paper analyzes housing sale prices in Ames, Iowa using multiple linear regression. The dataset is filtered to focus on homes with 2–4 bedrooms, built after 1940, and rated average to excellent in quality. Predictors include log-transformed ground living area, garage area, year built, number of bedrooms, and overall quality. Log transformations address skewness and heteroscedasticity. The final model achieves an R² of 0.819, with ground living area and overall quality identified as the most influential predictors. The results provide interpretable insights for investors, buyers, and policymakers."
+abstract: "This paper investigates the determinants of housing prices in Ames, Iowa using multiple linear regression. Focusing on homes with 2–4 bedrooms, built after 1940, and rated average to excellent in quality, we examine the impact of structural features such as ground living area, garage area, year built, number of bedrooms, and overall quality. Log transformations are applied to address skewness and heteroscedasticity in key variables. The final model explains 81.9% of the variation in sale price, with ground living area and overall quality emerging as the most influential predictors. These findings offer practical insights for homebuyers, investors, and policymakers."
 format: pdf
 number-sections: true
 toc: true
