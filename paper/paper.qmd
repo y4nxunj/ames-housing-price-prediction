@@ -14,7 +14,6 @@ format: pdf
 number-sections: true
 toc: true
 bibliography: references.bib
-
 ---
 
 ```{r}
@@ -69,7 +68,6 @@ lm_trans_model <- lm(
 summary(lm_model)
 ```
 
-
 # Introduction
 The housing market significantly impacts financial stability and investment. The challenge many people face in finding affordable housing highlights the importance of understanding the factors that influence house prices. Given rising real estate costs, identifying factors influencing home values has become both timely and relevant. This study aims to analyze the key factors affecting housing prices in Ames, Iowa, focusing on attributes such as the number of bedrooms (two to four), garage area, ground living area, overall quality (average to excellent), and year built. The research question seeks to determine which housing attributes most significantly influence the sales price of homes in average to excellent quality grade with two to four bedrooms.
 
@@ -109,7 +107,6 @@ ggplot(ames_data, aes(x = Sale_Price)) +
 
 Prior to log transformation in @fig-sale, sale price is heavily right skewed.
 
-
 ```{r}
 #| label: fig-log-sale
 #| fig-cap: Distribution of Log-Transformed Sale Prices.
@@ -131,6 +128,7 @@ ggplot(ames_data, aes(x = log_Sale_Price)) +
   )
 
 ```
+
 After the log transformation in @fig-log-sale, sale price is more normally distributed.
 
 ```{r}
@@ -274,6 +272,7 @@ ggplot(ames_data, aes(y = log_Garage_Area)) +
   )
 
 ```
+
 Garage area in @fig-garage-area has a similar distribution as ground living area, showing a right skew. We again apply log transformation in @fig-log-garage-area to address the same skewness issue. The normality of distribution is drastically improved.
 
 ```{r}
@@ -302,6 +301,7 @@ ggplot(ames_data, aes(x = Year_Built)) +
   )
 
 ```
+
 For the year built distribution in @fig-year-built, due to the discrete and linear nature of time in, there seem to have high and low extremes which can possibly be explained by economic factors. However, the count differences do not necessarily heavily impact residual variances.
 
 ```{r}
@@ -356,9 +356,8 @@ ggplot(ames_data, aes(x = Overall_Qual)) +
   )
 
 ```
+
 From @fig-quality, most houses have average to good quality grades, with a rare number of excellent grades.
-
-
 
 # Preliminary Model Results {#sec-prelim}
 
@@ -405,7 +404,6 @@ ggplot(ames_data, aes(x = Gr_Liv_Area, y = residuals)) +
 
 ```
 
-
 ```{r}
 #| label: fig-resid-gar
 #| fig-cap: Residuals versus Garage Area showing left-side clustering and heteroscedasticity.
@@ -430,7 +428,6 @@ ggplot(ames_data, aes(x = Garage_Area, y = residuals)) +
 In the ground living area residual plot @fig-resid-gr, residuals appear mostly random with slight clustering toward the left, indicating potential heteroscedasticity. 
 For the garage area residual plot @fig-resid-gar, the residuals also cluster more on the left, also suggesting potential correlated errors or heteroscedasticity.
 These patterns suggested that homoscedasticity assumptions were not fully satisfied.
-
 
 ```{r}
 #| label: fig-box-bed
@@ -473,7 +470,6 @@ ggplot(ames_data, aes(x = as.factor(Overall_Qual), y = residuals)) +
 ```
 
 For the residual plots for both the bedrooms above ground @fig-box-bed and overall quality @fig-box-qual. By restricting the number of bedrooms to between two and four, and limiting quality grades to average and above. We achieve a more consistent interquartile range across predictor levels. While this does not ensure elimination of potential violations in all relationships, it reduces the extreme deviation visibly, improving stability.
-
 
 ```{r}
 #| label: fig-resid-year
@@ -521,7 +517,6 @@ ggplot(ames_data, aes(x = fitted_values, y = residuals)) +
 
 For the year built residual plot @fig-resid-year, although discrete, it is best treated as a continuous variable since time is an increasing measure. We restricted the data to post-1940 to exclude outliers. The residual spread appears random year by year, showing no visible pattern. 
 For the fitted value residual plot @fig-resid-fitted, similar to the ground living area plot, slight clustering on the left which also suggests potential heteroscedasticity.
-
 
 ```{r}
 #| label: fig-response-fitted
@@ -592,13 +587,12 @@ pairs(plot_data)
 After log-transforming the response @fig-qq, the right-skewed tail is significantly reduced but still shows some deviations, indicating skewness still persists. A strong left skew suggests the residuals deviates from normal, potentially violating normality assumption. 
 In the pairwise plot @fig-pair, the relationship between ground living area and garage area shows both a linear trend and scattered cluster, suggesting multiple underlying relationships violating linearity. Other variable relationships appear either random or linear, largely aligning with the assumption.
 
-
 # Model Selection {#sec-model}
-
 Based on the diagnostic issues from @sec-prelim, several improvements were made to build a more solid model for predicting house prices, including transformation, data restrictions, and data interpretation.
 
 ## Transformations on Predictor Variables
 Both ground living area in @fig-log-gr and garage area in @fig-log-gar are log transformed to address right skewed distributions and reduce heteroscedasticity observed from preliminary analysis. The transformations showed that the residuals are more evenly scattered, drastically eliminating previous violations. With the garage area filtered to greater than zero, we avoid undefined values from log transformation.
+
 ```{r}
 #| label: fig-log-gr
 #| fig-cap: Residuals plotted against log-transformed ground living area to assess linearity and homoscedasticity.
@@ -674,6 +668,7 @@ ggplot(ames_data, aes(x = as.factor(Overall_Qual), y = residuals2)) +
   theme(axis.title = element_text(face = "bold"))
 
 ```
+
 And we continue to limit the number of bedrooms to two, three, and four in @fig-resid2-vs-bedroom, and only include houses with rating from average to excellent in @fig-resid2-vs-quality. The restrictions not only preserved the stability of residuals, but also improved the skewness in the bedroom levels in the updated model with transformed predictors.
 
 ## Outliers
@@ -697,12 +692,9 @@ ggplot(ames_data, aes(x = Year_Built, y = residuals2)) +
 
 ```
 
-
 With the same data filtering to restrict houses from 1940 or later to remove older houses which likely are outliers in the real world due to depreciation. The residual spread continues to appear random year by year, showing no visible pattern (@fig-resid2-vs-year). However, since this variable is discrete, plus we treat it as a continuous variable since time is an increasing measure, the gaps between some years can be explained by economic factors outside the scope of regression analysis. Which is not a concern for violation of assumptions.
 
-
 ## Fitted Values
-
 ```{r}
 #| label: fig-resid2-vs-fitted
 #| fig-cap: Plot of residuals versus fitted values from the transformed model. A random scatter pattern supports homoscedasticity.
@@ -721,6 +713,7 @@ ggplot(ames_data, aes(x = fitted_values2, y = residuals2)) +
   theme(axis.title = element_text(face = "bold"))
 
 ```
+
 For the fitted value residual plot in @fig-resid2-vs-fitted, after the log transformations on garage area and ground living area, the spread now displays no visible pattern and seems randomly scattered.
 
 ```{r}
@@ -738,6 +731,7 @@ ggplot(ames_data, aes(x = fitted_values2, y = log_Sale_Price)) +
   theme(axis.title = element_text(face = "bold"))
 
 ```
+
 For the response versus fitted plot in @fig-fitted-vs-logsale, the points now are more randomly scattered along the diagonal, as a result of the log transformation on garage area and ground living area, which reduced the previous deviation.
 
 ## Normality and Predictor Relationship
@@ -756,8 +750,8 @@ ggplot(data = data.frame(residuals = resid(lm_trans_model)), aes(sample = residu
   theme(axis.title = element_text(face = "bold"))
 
 ```
-After log-transforming the response, the right-skewed tail is reduced (@fig-qq-residuals). A left skew still persists after transforming the two predictors suggesting deviations from normal, even though the residual plots do not show it. This suggests that the model slightly underestimates the prices of the lower valued houses. Likely from unmeasured factors like investors perception, which can disproportionate the lower end houses. From the QQ-plot we observed a left tail deviation that could not be addressed even after we performed the transformations which could be a potential limitation to our study. Despite this left tail deviation, the overall distribution is still reasonably normal, with no visible violation from residual patterns.
 
+After log-transforming the response, the right-skewed tail is reduced (@fig-qq-residuals). A left skew still persists after transforming the two predictors suggesting deviations from normal, even though the residual plots do not show it. This suggests that the model slightly underestimates the prices of the lower valued houses. Likely from unmeasured factors like investors perception, which can disproportionate the lower end houses. From the QQ-plot we observed a left tail deviation that could not be addressed even after we performed the transformations which could be a potential limitation to our study. Despite this left tail deviation, the overall distribution is still reasonably normal, with no visible violation from residual patterns.
 
 ```{r}
 #| label: fig-pairs-predictors
@@ -889,9 +883,7 @@ In addition, previous visual inspection of residual plots supports the model’s
 
 Overall, our final model shows that our chosen predictors significantly affect house prices. The log transformed variables allow for percentage-based interpretation which gives practical insights into how each attribute contributes to price. The model performance is strong as shown by the statistics, and the results are mostly consistent with literature findings.
 
-
 # Discussion and Conclusion {#sec-discussion}
-
 Our study explores the relationship between house attributes and the sale prices of houses in Ames, Iowa. Using our carefully filtered dataset and a multiple linear regression model, we focused on how factors like ground living area, garage area, number of bedrooms, year built, and overall quality influence house prices. All predictors were chosen based on the literature we found, exploratory data analysis, and real world knowledge, with transformations and filtering applied as needed to meet linear regression assumptions.
 
 ## Main Conclusions
